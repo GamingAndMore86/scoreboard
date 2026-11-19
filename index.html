@@ -116,7 +116,7 @@ dialog .swatches{margin:8px 0 4px}
 .btn.danger{border-color:var(--ember);color:var(--ember)}
 .btn.danger:hover:not(:disabled){background:var(--ember);color:#fff}
 dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;font:500 16px Barlow,sans-serif}
-#dart{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;padding:max(10px,env(safe-area-inset-top,0px)) 10px calc(14px + env(safe-area-inset-bottom,0px))}
+#dart{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;padding:max(10px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
 #dart[hidden]{display:none}
 .dhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;width:100%;max-width:560px;margin-left:auto;margin-right:auto}
 .dtitle{font:800 22px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;text-align:center}
@@ -151,6 +151,24 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
 .dfin .fl{font:600 14px Barlow,sans-serif;margin-right:2px}
 .dfin b{font:800 24px/1 "Barlow Condensed",sans-serif;color:var(--gold);padding:6px 12px;border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);border-radius:8px;background:color-mix(in srgb,var(--gold) 12%,transparent)}
 .dfin i{font-style:normal}
+.startrow{display:flex;gap:10px;margin-bottom:28px}
+.startrow .start{flex:1;width:auto;margin-bottom:0}
+@media (orientation:portrait) and (min-width:600px){
+  #dart{--bs:clamp(360px,calc(100vh - 390px),min(100%,780px))}
+  @supports (height:100dvh){#dart{--bs:clamp(360px,calc(100dvh - 390px),min(100%,780px))}}
+  .dhead,.dplayers,.dturn,.dfin,.dbtns{max-width:var(--bs)}
+  .bw{max-width:none;width:var(--bs)}
+}
+@media (orientation:landscape) and (min-width:640px){
+  #dart{display:grid;grid-template-columns:auto minmax(300px,1fr);grid-template-rows:auto auto auto auto 1fr;column-gap:20px;row-gap:6px}
+  .bw{grid-column:1;grid-row:1 / 6;width:min(calc(100vh - 24px),calc(100vw - 360px));max-width:none;margin:0;align-self:center}
+  @supports (height:100dvh){.bw{width:min(calc(100dvh - 24px),calc(100vw - 360px))}}
+  .dhead,.dplayers,.dturn,.dfin,.dbtns{grid-column:2;max-width:none;margin:0}
+  .dplayers{flex-wrap:wrap;overflow:visible}
+  .pc{flex:1 0 140px}
+  .dbtns{align-self:end}
+  .dbtns .btn{font-size:18px}
+}
 #board .tgt{animation:tg .8s ease-in-out infinite alternate}
 @keyframes tg{from{filter:brightness(1)}to{filter:brightness(2)}}
 @media (prefers-reduced-motion:reduce){#board .tgt{animation:none;filter:brightness(1.7)}}
@@ -273,6 +291,8 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     if(!raf)cx.clearRect(0,0,innerWidth,innerHeight);
   }
   function retrigger(el,cls){el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);}
+  var bTimer=null;
+  function popBanner(b){retrigger(b,"go");clearTimeout(bTimer);bTimer=setTimeout(function(){b.classList.remove("go");},1500);}
   function celebrate(btn,p){
     var big=p.streak>=5||p.wins%10===0, mid=p.streak>=3||p.wins%5===0;
     var r=btn.getBoundingClientRect();
@@ -282,7 +302,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     else if(p.streak>=5){msg="Unaufhaltsam";sub=p.name+" · "+p.streak+" in Folge";}
     else if(p.streak>=3){msg=p.streak+"er Serie";sub=p.name;}
     var b=document.getElementById("banner");b.innerHTML=esc(msg)+"<small>"+esc(sub)+"</small>";
-    retrigger(b,"go");retrigger(document.getElementById("flash"),"go");
+    popBanner(b);retrigger(document.getElementById("flash"),"go");
     if(navigator.vibrate)try{navigator.vibrate(big?[30,40,60]:25);}catch(e){}
     chime(big);
   }
@@ -313,8 +333,8 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   document.getElementById("game").addEventListener("click",function(e){
     var t=e.target.closest("button");if(!t||t.disabled)return;
     if(t.dataset.open){picking=true;selected=[];renderGame();}
-    else if(t.dataset.chip){var i=selected.indexOf(t.dataset.chip);if(i>-1)selected.splice(i,1);else selected.push(t.dataset.chip);renderGame();}
-    else if(t.dataset.go){var ids=selected.filter(byId);picking=false;selected=[];game=ids.length>=2?newGame(ids):null;save();renderGame();if(game&&game.mode==="x01")openDart();}
+    else if(t.dataset.chip){var i=selected.indexOf(t.dataset.chip);if(training){selected=[t.dataset.chip];}else if(i>-1)selected.splice(i,1);else selected.push(t.dataset.chip);renderGame();}
+    else if(t.dataset.go){var ids=selected.filter(byId);picking=false;selected=[];game=ids.length>=(training?1:2)?newGame(ids):null;save();renderGame();if(game&&game.mode==="x01")openDart();}
     else if(t.dataset.cancel){game=null;picking=false;selected=[];save();renderGame();}
     else if(t.dataset.win){declare(t.dataset.win,t.getBoundingClientRect());}
   });
@@ -389,13 +409,13 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   delGo.onclick=function(){
     var id=delTarget,p=byId(id);if(!p||delGo.disabled)return;
     take();players=players.filter(function(x){return x.id!==id;});
-    if(game){game.ids=game.ids.filter(function(x){return x!==id;});if(game.ids.length<2)game=null;}
+    if(game){game.ids=game.ids.filter(function(x){return x!==id;});if(game.ids.length<(game.training?1:2))game=null;}
     delDlg.close();save();render();
   };
   document.getElementById("delNo").onclick=function(){delDlg.close();};
 
   /* Darts */
-  var gmode="501",dout=true,dartOpen=false;
+  var gmode="501",dout=true,dartOpen=false,training=false;
   var ORDER=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
   function pol(r,a){return [250+r*Math.sin(a),250-r*Math.cos(a)];}
   function f1(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}
@@ -416,7 +436,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     document.getElementById("board").innerHTML=s;
   }
   function modeHtml(){
-    var modes=[["manual","Sieger antippen"],["301","301"],["501","501"],["701","701"]];
+    var modes=(training?[]:[["manual","Sieger antippen"]]).concat([["301","301"],["501","501"],["701","701"]]);
     return '<p class="hint" style="margin-top:20px">Spielart</p><div class="chips">'+modes.map(function(m){return '<button class="chip'+(gmode===m[0]?' on':'')+'" style="--pc:var(--gold)" data-gm="'+m[0]+'"><i class="cd"></i>'+m[1]+'</button>';}).join("")+
       (gmode!=="manual"?'<button class="chip'+(dout?' on':'')+'" style="--pc:var(--gold)" data-dout="1"><i class="cd"></i>Double-Out</button>':'')+'</div>';
   }
@@ -424,16 +444,20 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     if(gmode==="manual")return {ids:ids,mode:"manual"};
     var s=parseInt(gmode,10),rem={},dc={};
     ids.forEach(function(id){rem[id]=s;dc[id]=0;});
-    return {ids:ids,mode:"x01",start:s,dout:dout,rem:rem,darts:dc,dAtt:{},dHit:{},turn:0,throws:[],ts:s,pending:null,hist:[],marks:[]};
+    return {ids:ids,mode:"x01",training:!!training,start:s,dout:dout,rem:rem,darts:dc,dAtt:{},dHit:{},turn:0,throws:[],ts:s,pending:null,hist:[],marks:[]};
   }
   function renderGame(){
-    renderGameBase();
+    if(!picking)training=false;renderGameBase();
     var g=document.getElementById("game");
     if(game&&game.mode==="x01"){
-      g.innerHTML='<div class="panel"><h2>'+game.start+' läuft</h2><p class="hint">Die Würfe werden im Dart-Screen erfasst. Der Sieger wird automatisch gebucht.</p><div class="gact"><button class="btn win" data-dopen="1">Dart-Screen öffnen</button><button class="btn ghost" data-cancel="1">Spiel abbrechen</button></div></div>';
+      g.innerHTML='<div class="panel"><h2>'+(game.training?'Training ':'')+game.start+' läuft</h2><p class="hint">'+(game.training?'Training zählt nicht fuers Ranking, nur die Double-Quote.':'Die Würfe werden im Dart-Screen erfasst. Der Sieger wird automatisch gebucht.')+'</p><div class="gact"><button class="btn win" data-dopen="1">Dart-Screen öffnen</button><button class="btn ghost" data-cancel="1">Spiel abbrechen</button></div></div>';
+    }else if(!game&&!picking){
+      g.innerHTML=players.length?'<div class="startrow">'+(players.length>=2?'<button class="btn win start" data-open="1">Neues Spiel</button>':'')+'<button class="btn start" data-train="1">Training</button></div>':'';
     }else if(!game&&picking){
       var ga=g.querySelector(".gact");
       if(ga){var m=document.createElement("div");m.innerHTML=modeHtml();while(m.firstChild)ga.parentNode.insertBefore(m.firstChild,ga);}
+      var go=g.querySelector("[data-go]");if(go)go.disabled=selected.length<(training?1:2);
+      if(training){var h2=g.querySelector("h2"),hp=g.querySelector(".hint");if(h2)h2.textContent="Training: wer übt?";if(hp)hp.textContent="Einen Spieler wählen.";}
     }
     renderDart();
   }
@@ -442,6 +466,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     if(t.dataset.gm){gmode=t.dataset.gm;renderGame();}
     else if(t.dataset.dout){dout=!dout;renderGame();}
     else if(t.dataset.dopen){openDart();}
+    else if(t.dataset.train){training=true;picking=true;selected=[];if(gmode==="manual")gmode="501";renderGame();}
   });
   function openDart(){dartOpen=true;renderDart();}
   function parseDart(c){
@@ -454,7 +479,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   function pip(){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();tone(880,ac.currentTime,.07,"square",.035);}catch(e){}}
   function thud(){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();var t=ac.currentTime;tone(110,t,.35,"sawtooth",.12);tone(82,t+.08,.4,"sawtooth",.1);}catch(e){}}
   function dFx(msg,sub,bad,n,col){
-    var b=document.getElementById("banner");b.classList.toggle("bad",!!bad);b.innerHTML=esc(msg)+"<small>"+esc(sub)+"</small>";retrigger(b,"go");
+    var b=document.getElementById("banner");b.classList.toggle("bad",!!bad);b.innerHTML=esc(msg)+"<small>"+esc(sub)+"</small>";popBanner(b);
     if(!bad){retrigger(document.getElementById("flash"),"go");if(!reduce)burst(innerWidth/2,innerHeight*0.45,n||70,col);chime(n>100);}
     else thud();
     if(navigator.vibrate)try{navigator.vibrate(bad?[60,40,60]:[20,30,40]);}catch(e){}
@@ -466,7 +491,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     OPT.push({l:"D"+n,v:2*n,dbl:true,sp:(60-2*n)/6+5,fp:DRANK.indexOf(n)});
     OPT.push({l:"T"+n,v:3*n,dbl:false,sp:(60-3*n)/6});
   }
-  OPT.push({l:"25",v:25,dbl:false,sp:6});
+  
   OPT.push({l:"Bull",v:50,dbl:true,sp:7,fp:7.5});
   OPT.forEach(function(o){(BYV[o.v]=BYV[o.v]||[]).push(o);});
   function findFinish(rem,n,dout){
@@ -501,7 +526,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     if(pt)game.marks.push([Math.round(pt[0]),Math.round(pt[1])]);
     if(bust){game.rem[id]=game.ts;game.pending={bust:true};save();renderDart();dFx("Bust",p.name+" bleibt bei "+game.ts,true);return;}
     game.rem[id]=nw;
-    if(win){if(game.dout){game.dHit[id]=(game.dHit[id]||0)+1;}
+    if(win){if(game.dout){game.dHit[id]=(game.dHit[id]||0)+1;}if(game.training){finishTraining(id,p);return;}
       dartOpen=false;
       declare(id,{left:innerWidth/2,top:innerHeight*0.45,width:2,height:2});
       return;
@@ -516,6 +541,13 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
       return;
     }
     save();renderDart();
+  }
+  function finishTraining(id,p){
+    var dn=game.darts[id]||0,avg=dn?fmt(game.start/dn*3):"-";
+    take();
+    p.dAtt=(p.dAtt||0)+(game.dAtt[id]||0);p.dHit=(p.dHit||0)+(game.dHit[id]||0);
+    game=null;dartOpen=false;save();render();
+    dFx("Checkout",p.name+" · "+dn+" Darts · Ø "+avg,false,170,colorOf(p));
   }
   function nextTurn(){
     if(!game||!game.pending)return;
@@ -536,7 +568,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     if(!on)return;
     if(game.turn>=game.ids.length)game.turn=0;
     var cur=byId(game.ids[game.turn]);if(!cur)return;
-    document.getElementById("dTitle").textContent=game.start+(game.dout?" mit Double-Out":"");
+    document.getElementById("dTitle").textContent=(game.training?"Training · ":"")+game.start+(game.dout?" mit Double-Out":"");
     document.getElementById("dPlayers").innerHTML=game.ids.map(function(id,i){
       var p=byId(id);if(!p)return "";
       var dn=game.darts[id]||0,avg=dn?fmt((game.start-game.rem[id])/dn*3):"-";
