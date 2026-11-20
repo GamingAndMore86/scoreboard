@@ -598,7 +598,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   function crown(p){return !!(session&&session.day===dayKey()&&session.by===p.id&&session.hiCO>0);}
   function turnFx(id,p,gs,sum,bust,quiet){
     var f=fxs(),col=colorOf(p),th=game.throws;
-    var coldTurn=bust||sum<=10;
+    var coldTurn=bust||sum<=40;
     if(game.ts>60)f.cold[id]=coldTurn?(f.cold[id]||0)+1:0;
     var strong=!bust&&sum>=60;
     f.hot[id]=strong?(f.hot[id]||0)+1:0;
@@ -613,7 +613,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
       if(p.st&&p.st.max>0&&sum>base){gs.recMax=sum;dFx("🏆 Rekord","Höchste Runde: "+sum+" · "+p.name,false,100,col);}
       if(strong&&f.hot[id]>=3&&(f.hot[id]-3)%2===0)dFx("🔥 Hot Streak",p.name+" · "+f.hot[id]+" starke Runden in Folge",false,80,col);
     }
-    if(f.cold[id]>=3&&f.cold[id]%3===0)dFx("🧊 Eiszeit",p.name+" · "+f.cold[id]+" Runden mit höchstens 10 Punkten","cold",0,col);
+    if(f.cold[id]>=3&&f.cold[id]%3===0)dFx("🧊 Eiszeit",p.name+" · "+f.cold[id]+" Runden mit höchstens 40 Punkten","cold",0,col);
   }
   function chokeFx(id,p,wasD){
     if(!wasD)return;
