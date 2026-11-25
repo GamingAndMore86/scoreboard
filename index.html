@@ -25,6 +25,7 @@
 }
 :root[data-theme="dark"]{color-scheme:dark}
 *,*::before,*::after{box-sizing:inherit}
+html,body,*{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:500 16px/1.5 Barlow,system-ui,sans-serif;
   background-image:radial-gradient(900px 420px at 50% -120px,var(--glow),transparent 70%);background-repeat:no-repeat}
@@ -189,8 +190,8 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
 .top .bar2 i{display:block;height:100%;background:var(--pc)}
 .top .n{text-align:right;color:var(--muted)}
 @media (orientation:portrait) and (min-width:600px){
-  #dart{--bs:clamp(360px,calc(100vh - 450px),min(100%,780px))}
-  @supports (height:100dvh){#dart{--bs:clamp(360px,calc(100dvh - 450px),min(100%,780px))}}
+  #dart{--bs:clamp(360px,calc(100vh - 470px),min(100%,780px))}
+  @supports (height:100dvh){#dart{--bs:clamp(360px,calc(100dvh - 470px),min(100%,780px))}}
   .dhead,.dplayers,.dturn,.dfin,.dbtns{max-width:var(--bs)}
   .bw{max-width:none;width:var(--bs)}
 }
@@ -247,6 +248,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     <button class="btn" id="copy">Kopieren</button>
     <button class="btn" id="loadFile">Datei laden</button>
     <button class="btn" id="doImport">Einlesen</button>
+    <button class="btn danger" id="resetAll">Alles zurücksetzen</button>
     <button class="btn ghost" id="close">Schließen</button>
   </div>
   <p class="hint" id="msg"></p>
@@ -254,6 +256,8 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
 </dialog>
 <dialog id="colDlg"><h2>Farbe wählen</h2><div class="swatches" id="colSw"></div><div class="dact"><button class="btn ghost" id="colClose">Schließen</button></div></dialog>
 <dialog id="delDlg"><h2>Spieler löschen</h2><p class="hint" id="delTxt"></p><input id="delIn" type="text" autocomplete="off" aria-label="Namen zur Bestätigung eintippen"><div class="dact"><button class="btn danger" id="delGo" disabled>Endgültig löschen</button><button class="btn ghost" id="delNo">Abbrechen</button></div>
+</dialog>
+<dialog id="resetDlg"><h2>Alles zurücksetzen</h2><p class="hint">Löscht alle Spieler, Scores, Statistiken und das laufende Spiel. Mach vorher einen Export unter „Daten“, wenn du etwas behalten willst. Zur Bestätigung RESET eintippen.</p><input id="resetIn" type="text" autocomplete="off" autocapitalize="characters" aria-label="RESET zur Bestätigung eintippen"><div class="dact"><button class="btn danger" id="resetGo" disabled>Alles löschen</button><button class="btn ghost" id="resetNo">Abbrechen</button></div>
 </dialog>
 <script>
 (function(){
@@ -454,6 +458,17 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   };
   document.getElementById("delNo").onclick=function(){delDlg.close();};
 
+  /* Alles zurücksetzen */
+  var rstDlg=document.getElementById("resetDlg"),rstIn=document.getElementById("resetIn"),rstGo=document.getElementById("resetGo");
+  document.getElementById("resetAll").onclick=function(){rstIn.value="";rstGo.disabled=true;dlg.close();rstDlg.showModal();rstIn.focus();};
+  rstIn.addEventListener("input",function(){rstGo.disabled=rstIn.value.trim().toUpperCase()!=="RESET";});
+  rstGo.onclick=function(){
+    if(rstGo.disabled)return;
+    take();players=[];game=null;session=null;picking=false;selected=[];training=false;dartOpen=false;statsOpen=false;statSel=null;fxq.length=0;
+    save();rstDlg.close();document.body.style.overflow="";render();renderStats();
+  };
+  document.getElementById("resetNo").onclick=function(){rstDlg.close();};
+
   /* Darts */
   var gmode="501",dout=true,dartOpen=false,training=false,glegs=1;
   var ORDER=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
@@ -585,7 +600,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
       game.pending={done:true};turnEnd(gs,game.throws.reduce(function(a,t){return a+t.v;},0));
       var sum=game.throws.reduce(function(a,t){return a+t.v;},0);
       save();renderDart();
-      turnFx(id,p,gs,sum,false);save();
+      turnFx(id,p,gs,sum,false);save();renderDart();
       
       return;
     }
@@ -598,6 +613,9 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   function crown(p){return !!(session&&session.day===dayKey()&&session.by===p.id&&session.hiCO>0);}
   function turnFx(id,p,gs,sum,bust,quiet){
     var f=fxs(),col=colorOf(p),th=game.throws;
+    f.last=f.last||{};f.tn=f.tn||{};f.f9p=f.f9p||{};f.f9d=f.f9d||{};
+    f.last[id]=bust?-1:sum;f.tn[id]=(f.tn[id]||0)+1;
+    if(f.tn[id]<=3){f.f9p[id]=(f.f9p[id]||0)+(bust?0:sum);f.f9d[id]=(f.f9d[id]||0)+(quiet?th.length:3);}
     var coldTurn=bust||sum<=40;
     if(game.ts>60)f.cold[id]=coldTurn?(f.cold[id]||0)+1:0;
     var strong=!bust&&sum>=60;
@@ -670,7 +688,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     if(game.pending.leg){
       game.legNo=(game.legNo||0)+1;
       game.ids.forEach(function(pid){game.rem[pid]=game.start;});
-      game.ld={};fxs().def={};fxs().dm={};game.turn=game.legNo%game.ids.length;game.throws=[];game.pending=null;game.marks=[];game.ts=game.start;
+      game.ld={};fxs().def={};fxs().dm={};fxs().tn={};fxs().last={};game.turn=game.legNo%game.ids.length;game.throws=[];game.pending=null;game.marks=[];game.ts=game.start;
       save();renderDart();return;
     }
     roundCheck();game.turn=(game.turn+1)%game.ids.length;game.throws=[];game.pending=null;game.marks=[];
@@ -693,8 +711,9 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     document.getElementById("dPlayers").innerHTML=game.ids.map(function(id,i){
       var p=byId(id);if(!p)return "";
       var dn=game.darts[id]||0,avg=dn?fmt((((game.ptsAcc&&game.ptsAcc[id])||0)+((game.pending&&game.pending.leg)?0:game.start-game.rem[id]))/dn*3):"-";
+      var fx0=game.fx||{},lv=fx0.last&&fx0.last[id],lt=lv===undefined?"–":(lv<0?"Bust":lv),f9d=fx0.f9d&&fx0.f9d[id],f9=f9d?fmt(fx0.f9p[id]/f9d*3):"–";
       var da=(game.dAtt&&game.dAtt[id])||0,dh=(game.dHit&&game.dHit[id])||0,dq=da?'<div class="a">Double '+fmt(dh/da*100)+' % ('+dh+'/'+da+')</div>':'';
-      return '<div class="pc'+(i===game.turn?' cur':'')+'" style="--pc:'+colorOf(p)+'"><div class="n"><i class="dot2"></i>'+esc(p.name)+(game.legs>1?'<span class="lg">'+((game.lw&&game.lw[id])||0)+'</span>':'')+'</div><div class="r">'+game.rem[id]+'</div><div class="a">Ø '+avg+'</div>'+dq+'</div>';
+      return '<div class="pc'+(i===game.turn?' cur':'')+'" style="--pc:'+colorOf(p)+'"><div class="n"><i class="dot2"></i>'+esc(p.name)+(game.legs>1?'<span class="lg">'+((game.lw&&game.lw[id])||0)+'</span>':'')+'</div><div class="r">'+game.rem[id]+'</div><div class="a">Ø '+avg+' · Letzte '+lt+'</div><div class="a">Erste 9 Ø '+f9+'</div>'+dq+'</div>';
     }).join("");
     var th=game.throws,sum=th.reduce(function(a,t){return a+t.v;},0),bust=!!(game.pending&&game.pending.bust),slots="";
     for(var i=0;i<3;i++){
@@ -740,7 +759,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   function mergeStats(p,id,won){
     var gs=game.gs&&game.gs[id],dn=game.darts[id]||0;
     var s=p.st=p.st||{g:0,darts:0,pts:0,turns:0,max:0,c180:0,c140:0,c100:0,busts:0,hiCO:0,seg:{},best:{}};
-    s.g++;s.darts+=dn;s.pts+=(game.ptsAcc&&game.ptsAcc[id]!=null)?game.ptsAcc[id]:game.start-game.rem[id];
+    s.g++;s.darts+=dn;var fx9=game.fx||{};s.f9p=(s.f9p||0)+((fx9.f9p&&fx9.f9p[id])||0);s.f9d=(s.f9d||0)+((fx9.f9d&&fx9.f9d[id])||0);s.pts+=(game.ptsAcc&&game.ptsAcc[id]!=null)?game.ptsAcc[id]:game.start-game.rem[id];
     if(gs){
       s.turns+=gs.turns;s.legs=(s.legs||0)+(gs.legs||0);s.max=Math.max(s.max,gs.max);s.c180+=gs.c180;s.c140+=gs.c140;s.c100+=gs.c100;s.busts+=gs.busts;s.hiCO=Math.max(s.hiCO,gs.hiCO);
       for(var k in gs.seg)s.seg[k]=(s.seg[k]||0)+gs.seg[k];
@@ -750,7 +769,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   function cleanSt(x){
     if(!x||typeof x!=="object")return undefined;
     function n(v){return Math.max(0,parseInt(v,10)||0);}
-    var o={g:n(x.g),darts:n(x.darts),pts:n(x.pts),turns:n(x.turns),max:Math.min(180,n(x.max)),c180:n(x.c180),c140:n(x.c140),c100:n(x.c100),busts:n(x.busts),hiCO:Math.min(170,n(x.hiCO)),legs:n(x.legs),seg:{},best:{}};
+    var o={g:n(x.g),darts:n(x.darts),pts:n(x.pts),turns:n(x.turns),max:Math.min(180,n(x.max)),c180:n(x.c180),c140:n(x.c140),c100:n(x.c100),busts:n(x.busts),hiCO:Math.min(170,n(x.hiCO)),legs:n(x.legs),f9p:n(x.f9p),f9d:n(x.f9d),seg:{},best:{}};
     if(x.seg&&typeof x.seg==="object")Object.keys(x.seg).forEach(function(k){if(/^([SDT]([1-9]|1[0-9]|20)|B25|B50|M)$/.test(k)){var v=n(x.seg[k]);if(v)o.seg[k]=v;}});
     if(x.best&&typeof x.best==="object")Object.keys(x.best).forEach(function(k){if(/^[0-9]{3}$/.test(k)){var v=n(x.best[k]);if(v)o.best[k]=v;}});
     return o;
@@ -798,7 +817,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
       return;
     }
     var tiles=tile("Ø pro 3 Darts",fmt(s.pts/s.darts*3),sNum(s.darts)+" Darts in "+s.g+(s.g===1?" Spiel":" Spielen"),true)+
-      tile("Höchste Runde",s.max||"–",s.turns?"aus "+sNum(s.turns)+" Runden":"",true)+
+      tile("Ø erste 9 Darts",s.f9d?fmt(s.f9p/s.f9d*3):"–",s.f9d?"Leg-Start, pro 3 Darts":"")+tile("Höchste Runde",s.max||"–",s.turns?"aus "+sNum(s.turns)+" Runden":"",true)+
       tile("180er",s.c180,"",s.c180>0)+tile("140–179",s.c140,"")+tile("100–139",s.c100,"")+
       tile("High Finish",s.hiCO||"–","",s.hiCO>0)+
       tile("Double-Quote",pct(p.dHit||0,p.dAtt||0),p.dAtt?(p.dHit||0)+" von "+p.dAtt+" Darts auf Double":"",true)+
