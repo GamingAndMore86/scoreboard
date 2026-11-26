@@ -36,6 +36,7 @@ h1{font:800 clamp(40px,8vw,64px)/.9 "Barlow Condensed",Impact,sans-serif;letter-
 .icon{background:transparent;border:1px solid var(--line);color:var(--muted);height:38px;padding:0 14px;border-radius:8px;font:600 14px Barlow,sans-serif;cursor:pointer}
 .icon:hover:not(:disabled){color:var(--text);border-color:var(--muted)}
 .icon:disabled{opacity:.35;cursor:default}
+.icon.on{color:var(--gold);border-color:var(--gold)}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 .add{display:flex;gap:10px;margin-bottom:32px}
@@ -77,8 +78,8 @@ h1{font:800 clamp(40px,8vw,64px)/.9 "Barlow Condensed",Impact,sans-serif;letter-
 #flash.go{animation:flash .6s ease-out}
 @keyframes flash{0%{opacity:1}100%{opacity:0}}
 #banner{position:fixed;left:0;right:0;top:36%;text-align:center;pointer-events:none;z-index:60;opacity:0;
-  font:800 clamp(54px,14vw,120px)/1 "Barlow Condensed",Impact,sans-serif;text-transform:uppercase;color:var(--gold-2);text-shadow:0 0 40px var(--glow),0 4px 0 rgba(0,0,0,.25)}
-#banner small{display:block;font:600 clamp(16px,3.5vw,24px) Barlow,sans-serif;color:var(--text);text-shadow:none;letter-spacing:.08em;margin-top:6px}
+  font:800 clamp(54px,14vw,120px)/1 "Barlow Condensed",Impact,sans-serif;text-transform:uppercase;color:var(--gold-2);text-shadow:0 0 40px var(--glow),0 3px 16px rgba(0,0,0,.75)}
+#banner small{display:block;font:600 clamp(16px,3.5vw,24px) Barlow,sans-serif;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.6);letter-spacing:.08em;margin-top:6px}
 #banner.go{animation:banner 1.3s cubic-bezier(.2,.9,.2,1)}
 @keyframes banner{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.08)}30%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:scale(1.04) translateY(-12px)}}
 .start{width:100%;height:56px;font-size:22px;margin-bottom:28px}
@@ -151,6 +152,8 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
 .dbtns .dnext{grid-column:1 / -1;height:72px;font-size:26px}
 #banner.bad{color:var(--ember);text-shadow:0 0 40px rgba(255,106,61,.4)}
 #banner.cold{color:#7dd3fc;text-shadow:0 0 40px rgba(125,211,252,.4)}
+#scrim{position:fixed;inset:0;z-index:38;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(ellipse at 50% 42%,rgba(4,7,11,.9) 0%,rgba(4,7,11,.8) 45%,rgba(4,7,11,.62) 100%)}
+#scrim.on{opacity:1}
 .dfin{display:flex;align-items:center;gap:8px;width:100%;max-width:560px;margin:0 auto 8px;min-height:44px;color:var(--muted)}
 .dfin .fl{font:600 14px Barlow,sans-serif;margin-right:2px}
 .dfin b{font:800 24px/1 "Barlow Condensed",sans-serif;color:var(--gold);padding:6px 12px;border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);border-radius:8px;background:color-mix(in srgb,var(--gold) 12%,transparent)}
@@ -213,9 +216,9 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
 </style>
 </head>
 <body>
-<canvas id="fx"></canvas><div id="flash"></div><div id="banner"></div>
+<div id="scrim"></div><canvas id="fx"></canvas><div id="flash"></div><div id="banner"></div>
 <div id="dart" hidden>
-  <div class="dhead"><button class="icon" id="dClose">Schließen</button><div class="dtitle" id="dTitle"></div><button class="icon" id="dUndo">Dart zurück</button></div>
+  <div class="dhead"><div class="tools"><button class="icon" id="dClose">Schließen</button><button class="icon" id="dWake" aria-label="Display anlassen" title="Display anlassen">☀</button></div><div class="dtitle" id="dTitle"></div><button class="icon" id="dUndo">Dart zurück</button></div>
   <div class="dplayers" id="dPlayers"></div>
   <div class="dturn" id="dTurn"></div>
   <div class="dfin" id="dFin"></div>
@@ -227,7 +230,7 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   <header>
     <h1>Scoreboard</h1>
     <div class="tools">
-      <button class="icon" id="statBtn">Statistik</button><button class="icon" id="dataBtn">Daten</button><button class="icon" id="undo" disabled>Rückgängig</button>
+      <button class="icon" id="wakeBtn">Display: aus</button><button class="icon" id="statBtn">Statistik</button><button class="icon" id="dataBtn">Daten</button><button class="icon" id="undo" disabled>Rückgängig</button>
       <button class="icon" id="mute" aria-pressed="false">Sound an</button>
     </div>
   </header>
@@ -333,8 +336,8 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
   function retrigger(el,cls){el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);}
   var bTimer=null;
   function popBanner(b){
-    retrigger(b,"go");fxBusy=true;clearTimeout(bTimer);
-    bTimer=setTimeout(function(){b.classList.remove("go");fxBusy=false;var nx=fxq.shift();if(nx){if(typeof nx==="function")nx();else showFx.apply(null,nx);}},1500);
+    retrigger(b,"go");document.getElementById("scrim").classList.add("on");fxBusy=true;clearTimeout(bTimer);
+    bTimer=setTimeout(function(){b.classList.remove("go");fxBusy=false;var nx=fxq.shift();if(nx){if(typeof nx==="function")nx();else showFx.apply(null,nx);}else document.getElementById("scrim").classList.remove("on");},1500);
   }
   function celebrate(btn,p){
     if(fxBusy){fxq.push(function(){celebrate(btn,p);});return;}
@@ -840,6 +843,40 @@ dialog input[type=text]{width:100%;height:46px;padding:0 14px;background:var(--b
     else if(v==="back"){statSel=null;renderStats();}
     else{statSel=v;renderStats();document.getElementById("stats").scrollTop=0;}
   });
+
+  /* Display wach halten */
+  var wantWake=false,wl=null;
+  try{wantWake=localStorage.getItem("sb-wake")==="1";}catch(e){}
+  function wakeUI(){
+    var on=!!wl,b=document.getElementById("wakeBtn"),d=document.getElementById("dWake");
+    b.textContent=on?"Display: an":"Display: aus";b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);
+    d.classList.toggle("on",on);d.setAttribute("aria-pressed",on);
+  }
+  function acquireWake(){
+    if(!("wakeLock" in navigator))return Promise.resolve(false);
+    return navigator.wakeLock.request("screen").then(function(l){
+      wl=l;l.addEventListener("release",function(){wl=null;wakeUI();});wakeUI();return true;
+    },function(){wl=null;wakeUI();return false;});
+  }
+  function setWakePref(v){try{localStorage.setItem("sb-wake",v?"1":"0");}catch(e){}}
+  function toggleWake(){
+    if(wantWake||wl){
+      wantWake=false;setWakePref(false);
+      if(wl){try{wl.release();}catch(e){}}
+      wl=null;wakeUI();return;
+    }
+    wantWake=true;
+    acquireWake().then(function(ok){
+      if(ok){setWakePref(true);return;}
+      wantWake=false;setWakePref(false);wakeUI();
+      dFx("Nicht möglich",("wakeLock" in navigator)?"Der Browser hat das Wachhalten abgelehnt":"Dein Browser kann das Display nicht wachhalten",true);
+    });
+  }
+  document.getElementById("wakeBtn").onclick=toggleWake;
+  document.getElementById("dWake").onclick=toggleWake;
+  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&wantWake&&!wl)acquireWake();});
+  document.addEventListener("pointerdown",function(){if(wantWake&&!wl)acquireWake();});
+  wakeUI();if(wantWake)acquireWake();
 
   /* Aktionen */
   function addPlayer(){
